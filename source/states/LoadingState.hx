@@ -425,6 +425,8 @@ class LoadingState extends MusicBeatState
 		// Due to the Main thread and Discord thread, we decrease it by 2.
 		var threadCount:Int = Std.int(Math.max(1, getCPUThreadsCount() - #if DISCORD_ALLOWED 2 #else 1 #end));
 		threadPool = new FixedThreadPool(threadCount);
+		#else
+		// do nothing
 		#end
 	}
 
@@ -865,11 +867,11 @@ class LoadingState extends MusicBeatState
 	#if cpp
 	@:functionCode('
 		return std::thread::hardware_concurrency();
-    	')
+	')
 	@:noCompletion
-    	public static function getCPUThreadsCount():Int
-    	{
-        	return -1;
-    	}
-    	#end
+	public static function getCPUThreadsCount():Int
+	{
+		return -1;
+	}
+	#end
 }
