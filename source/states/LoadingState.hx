@@ -1,10 +1,13 @@
 package states;
 
 import lime.app.Future;
-// ENCERRAMOS EL IMPORT PROBLEMÁTICO
+// ENCERRAMOS TODOS LOS IMPORTS DE HILOS
 #if MULTITHREADED_LOADING
 import sys.thread.FixedThreadPool;
+import sys.thread.Thread;
+import sys.thread.Mutex;
 #end
+
 import haxe.Json;
 import lime.utils.Assets;
 import openfl.display.BitmapData;
@@ -19,9 +22,6 @@ import flash.media.Sound;
 import backend.Song;
 import backend.StageData;
 import objects.Character;
-
-import sys.thread.Thread;
-import sys.thread.Mutex;
 
 import objects.Note;
 import objects.NoteSplash;
@@ -46,10 +46,10 @@ class LoadingState extends MusicBeatState
 
 	static var originalBitmapKeys:Map<String, String> = [];
 	static var requestedBitmaps:Map<String, BitmapData> = [];
-	static var mutex:Mutex;
 	
-	// ENCERRAMOS LA VARIABLE DEL POOL
+	// ENCERRAMOS EL MUTEX Y EL POOL
 	#if MULTITHREADED_LOADING
+	static var mutex:Mutex;
 	static var threadPool:FixedThreadPool = null;
 	#end
 
@@ -347,9 +347,8 @@ class LoadingState extends MusicBeatState
 		#if MULTITHREADED_LOADING
 		if (threadPool != null) threadPool.shutdown(); // kill all workers safely
 		threadPool = null;
-		#end
-		
 		mutex = null;
+		#end
 	}
 
 	public static function checkLoaded():Bool
@@ -680,7 +679,10 @@ class LoadingState extends MusicBeatState
 
 	public static function startThreads()
 	{
+		#if MULTITHREADED_LOADING
 		mutex = new Mutex();
+		#end
+		
 		loadMax = imagesToPrepare.length + soundsToPrepare.length + musicToPrepare.length + songsToPrepare.length;
 		loaded = 0;
 
@@ -808,9 +810,14 @@ class LoadingState extends MusicBeatState
 			if (#if sys FileSystem.exists(file) || #end OpenFlAssets.exists(file, SOUND))
 			{
 				var sound:Sound = #if sys Sound.fromFile(file) #else OpenFlAssets.getSound(file, false) #end;
+				
+				#if MULTITHREADED_LOADING
 				mutex.acquire();
 				Paths.currentTrackedSounds.set(file, sound);
 				mutex.release();
+				#else
+				Paths.currentTrackedSounds.set(file, sound);
+				#end
 			}
 			else if (beepOnNull)
 			{
@@ -819,9 +826,14 @@ class LoadingState extends MusicBeatState
 				return FlxAssets.getSound('flixel/sounds/beep');
 			}
 		}
+		
+		#if MULTITHREADED_LOADING
 		mutex.acquire();
 		Paths.localTrackedAssets.push(file);
 		mutex.release();
+		#else
+		Paths.localTrackedAssets.push(file);
+		#end
 
 		return Paths.currentTrackedSounds.get(file);
 	}
@@ -844,11 +856,17 @@ class LoadingState extends MusicBeatState
 					#else
 					var bitmap:BitmapData = OpenFlAssets.getBitmapData(file, false);
 					#end
-
+					
+					#if MULTITHREADED_LOADING
 					mutex.acquire();
 					requestedBitmaps.set(file, bitmap);
 					originalBitmapKeys.set(file, requestKey);
 					mutex.release();
+					#else
+					requestedBitmaps.set(file, bitmap);
+					originalBitmapKeys.set(file, requestKey);
+					#end
+
 					return bitmap;
 				}
 				else trace('no such image $key exists');
