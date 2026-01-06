@@ -184,9 +184,9 @@ class Main extends Sprite
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
 		#end
 
-		#if DISCORD_ALLOWED
-		DiscordClient.prepare();
-		#end
+		//#if DISCORD_ALLOWED
+		//DiscordClient.prepare();
+		//#end
 
 		// shader coords fix
 		FlxG.signals.gameResized.add(function (w, h) {
@@ -252,9 +252,9 @@ class Main extends Sprite
 		Sys.println("Crash dump saved in " + Path.normalize(path));
 
 		Application.current.window.alert(errMsg, "Error!");
-		#if DISCORD_ALLOWED
-		DiscordClient.shutdown();
-		#end
+		//#if DISCORD_ALLOWED
+		//DiscordClient.shutdown();
+		//#end
 		Sys.exit(1);
 	}
 	#end
