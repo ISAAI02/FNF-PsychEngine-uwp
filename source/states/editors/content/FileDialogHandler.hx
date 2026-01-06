@@ -6,7 +6,11 @@ import openfl.events.IOErrorEvent;
 import flash.net.FileFilter;
 
 import haxe.Exception;
+
+// CORRECCIÓN AQUÍ: Solo importamos File si el sistema lo permite
+#if sys
 import sys.io.File;
+#end
 import lime.ui.*;
 
 import flixel.FlxBasic;
@@ -103,7 +107,14 @@ class FileDialogHandler extends FlxBasic
 	{
 		@:privateAccess
 		this.path = _fileRef.__path;
+		
+		// CORRECCIÓN AQUÍ: Solo leemos el archivo si estamos en un sistema con acceso (PC)
+		#if sys
 		this.data = File.getContent(this.path);
+		#else
+		this.data = null; // En Xbox esto quedará vacío, pero no crasheará
+		#end
+		
 		this.completed = true;
 		trace('Loaded file from: $path');
 
@@ -238,8 +249,9 @@ class FileReferenceCustom extends FileReference
 		}
 		__inputControl.click();
 		return true;
-		#end
-
+		#else
+		// SI ES XBOX (UWP): No hacemos nada, porque no hay explorador de archivos
 		return false;
+		#end
 	}
 }
