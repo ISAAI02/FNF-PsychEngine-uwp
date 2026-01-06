@@ -1,7 +1,10 @@
 package states;
 
 import lime.app.Future;
+// ENCERRAMOS EL IMPORT PROBLEMÁTICO
+#if MULTITHREADED_LOADING
 import sys.thread.FixedThreadPool;
+#end
 import haxe.Json;
 import lime.utils.Assets;
 import openfl.display.BitmapData;
@@ -44,7 +47,11 @@ class LoadingState extends MusicBeatState
 	static var originalBitmapKeys:Map<String, String> = [];
 	static var requestedBitmaps:Map<String, BitmapData> = [];
 	static var mutex:Mutex;
+	
+	// ENCERRAMOS LA VARIABLE DEL POOL
+	#if MULTITHREADED_LOADING
 	static var threadPool:FixedThreadPool = null;
+	#end
 
 	function new(target:FlxState, stopMusic:Bool)
 	{
@@ -336,8 +343,12 @@ class LoadingState extends MusicBeatState
 		isIntrusive = false;
 
 		FlxTransitionableState.skipNextTransIn = true;
+		
+		#if MULTITHREADED_LOADING
 		if (threadPool != null) threadPool.shutdown(); // kill all workers safely
 		threadPool = null;
+		#end
+		
 		mutex = null;
 	}
 
@@ -413,10 +424,8 @@ class LoadingState extends MusicBeatState
 		#if MULTITHREADED_LOADING
 		// Due to the Main thread and Discord thread, we decrease it by 2.
 		var threadCount:Int = Std.int(Math.max(1, getCPUThreadsCount() - #if DISCORD_ALLOWED 2 #else 1 #end));
-		#else
-		var threadCount:Int = 1;
-		#end
 		threadPool = new FixedThreadPool(threadCount);
+		#end
 	}
 
 	public static function prepareToSong()
@@ -576,18 +585,28 @@ class LoadingState extends MusicBeatState
 			if (player2 != player1)
 			{
 				threadsMax++;
+				#if MULTITHREADED_LOADING
 				threadPool.run(() -> {
 					try { preloadCharacter(player2, prefixVocals); } catch (e:Dynamic) {}
 					completedThread();
 				});
+				#else
+				try { preloadCharacter(player2, prefixVocals); } catch (e:Dynamic) {}
+				completedThread();
+				#end
 			}
 			if (!stageData.hide_girlfriend && gfVersion != player2 && gfVersion != player1)
 			{
 				threadsMax++;
+				#if MULTITHREADED_LOADING
 				threadPool.run(() -> {
 					try { preloadCharacter(gfVersion); } catch (e:Dynamic) {}
 					completedThread();
 				});
+				#else
+				try { preloadCharacter(gfVersion); } catch (e:Dynamic) {}
+				completedThread();
+				#end
 			}
 
 			if(threadsCompleted == threadsMax)
@@ -680,6 +699,7 @@ class LoadingState extends MusicBeatState
 
 	static function initThread(func:Void->Dynamic, traceData:String)
 	{
+		#if MULTITHREADED_LOADING
 		// trace('scheduled $func in threadPool');
 		#if debug
 		var threadSchedule = Sys.time();
@@ -705,6 +725,16 @@ class LoadingState extends MusicBeatState
 			loaded++;
 			// mutex.release();
 		});
+		#else
+		try {
+			if (func() != null) {}
+			else trace('ERROR! fail on preloading $traceData ');
+		}
+		catch(e:Dynamic) {
+			trace('ERROR! fail on preloading $traceData: $e');
+		}
+		loaded++;
+		#end
 	}
 
 	inline private static function preloadCharacter(char:String, ?prefixVocals:String)
@@ -835,11 +865,11 @@ class LoadingState extends MusicBeatState
 	#if cpp
 	@:functionCode('
 		return std::thread::hardware_concurrency();
-    	')
+    	')
 	@:noCompletion
-    	public static function getCPUThreadsCount():Int
-    	{
-        	return -1;
-    	}
-    	#end
+    	public static function getCPUThreadsCount():Int
+    	{
+        	return -1;
+    	}
+    	#end
 }
