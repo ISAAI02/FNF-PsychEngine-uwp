@@ -135,7 +135,7 @@ jobs:
         run: echo ${{github.run_id}} > VERSION
         
       - name: Rebuild Lime for WinRT
-        run: haxelib run lime rebuild lime winrt
+        run: haxelib run lime rebuild lime winrt -clean -64
         shell: cmd
         
       - name: Compile
