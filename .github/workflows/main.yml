@@ -133,7 +133,7 @@ jobs:
           haxelib install format --always --quiet
         shell: cmd
 
-      # 3. Clonar Lime, parchar SDL y copiar lime.ndll usando comandos nativos de PowerShell
+      # 3. Clonar Lime, parchar SDL y copiar lime.ndll
       - name: Clone and Rebuild Lime for WinRT64
         shell: pwsh
         run: |
@@ -146,15 +146,12 @@ jobs:
           Copy-Item -Path "C:/lime-src/ndll/WinRT64/lime.ndll" -Destination "C:/haxelib/lime/8,1,2/ndll/WinRT64/lime.ndll" -Force
           Get-ChildItem "C:/haxelib/lime/8,1,2/ndll/WinRT64"
 
-      # 4. Reemplazar Native.hx con funciones seguras para UWP (sin llamadas Win32 de escritorio)
+      # 4. Reemplazar Native.hx directamente sin usar variables ni bucles
       - name: Patch Native.hx for UWP
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Path . -Filter "Native.hx" -Recurse
-          foreach ($f in$files) {
-            Write-Host "Parchando archivo:" $f.FullName
-            Set-Content -Path $f.FullName -Value "package backend;`nclass Native {`n`tpublic static function __init__():Void {}`n`tpublic static function registerDPIAware():Void {}`n`tpublic static function fixScaling():Void {}`n}"
-          }
+          Set-Content -Path "source/backend/Native.hx" -Value "package backend;`nclass Native {`npublic static function __init__():Void {}`npublic static function registerDPIAware():Void {}`npublic static function fixScaling():Void {}`n}"
+          Get-Content -Path "source/backend/Native.hx"
 
       - name: Skip SScript setup mode
         run: echo oy9:showMacroty8:loopCosti25y10:includeAllfg >> %USERPROFILE%/settings.cocoa
