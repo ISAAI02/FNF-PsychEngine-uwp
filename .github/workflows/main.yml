@@ -48,7 +48,7 @@ jobs:
         with:
           name: linuxBuild
           path: 'export/release/linux/bin'
-  
+
   buildWindows:
     runs-on: windows-latest
 
@@ -72,13 +72,13 @@ jobs:
       - name: Create Version Tag
         run: echo "${{github.run_id}}" > VERSION
       - name: Compile
-        run: haxelib run lime build windows --app-version="4.0.0-${{ github.run_id}}"  -D officialBuild
+        run: haxelib run lime build windows --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
       - name: Publish Artifact
         uses: actions/upload-artifact@v4.3.4
         with:
           name: windowsBuild
           path: export/release/windows/bin
-  
+
   buildMac:
     runs-on: macos-15
 
@@ -101,46 +101,60 @@ jobs:
       - name: Create Version Tag
         run: echo "${{github.run_id}}" > VERSION
       - name: Compile
-        run: haxelib run lime build mac --app-version="4.0.0-${{ github.run_id}}"  -D officialBuild
+        run: haxelib run lime build mac --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
       - name: Publish Artifact
         uses: actions/upload-artifact@v4.3.4
         with:
           name: macBuild
           path: export/release/macos/bin
-  
+
   buildUWP:
     runs-on: windows-latest
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4.1.7
 
       - uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.4
-          
-      # Runs a set of commands using the runners shell
+
+      # 1. Inicializar las herramientas de C++ de Visual Studio en 64 bits
+      - name: Setup MSVC Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # 2. Instalar librerias del proyecto
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
           haxelib install hxcpp > /dev/null --quiet
           .\"setup/windows.bat"
         shell: cmd
-        
+
+      # 3. Clonar el codigo fuente completo de Lime y compilar WinRT64
+      - name: Clone and Rebuild Lime for WinRT64
+        run: |
+          git clone --recursive --depth 1 --branch 8.1.2 https://github.com/openfl/lime.git C:/lime-src
+          haxelib dev lime C:/lime-src
+          haxelib run lime rebuild tools
+          cd C:/lime-src/project
+          haxelib run hxcpp Build.xml -Dwinrt -DHXCPP_M64
+          dir C:\lime-src\ndll\WinRT64
+        shell: cmd
+
       - name: Skip SScript setup mode
         run: echo oy9:showMacroty8:loopCosti25y10:includeAllfg >> %USERPROFILE%/settings.cocoa
         shell: cmd
-        
+
       - name: Create Version Tag
         run: echo ${{github.run_id}} > VERSION
-        
-      - name: Rebuild Lime for WinRT
-        run: haxelib run lime rebuild lime winrt -clean -64
-        shell: cmd
-        
+
+      # 4. Compilar el proyecto para WinRT en 64 bits
       - name: Compile
-        run: haxelib run lime build winrt --app-version=4.0.0-${{ github.run_id}} -D officialBuild
-        
+        run: haxelib run lime build winrt -64 --app-version=4.0.0-${{ github.run_id}} -D officialBuild
+        shell: cmd
+
       - name: Publish Artifact
         uses: actions/upload-artifact@v4.3.4
         with:
