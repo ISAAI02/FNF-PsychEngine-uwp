@@ -146,6 +146,16 @@ jobs:
           Copy-Item -Path "C:/lime-src/ndll/WinRT64/lime.ndll" -Destination "C:/haxelib/lime/8,1,2/ndll/WinRT64/lime.ndll" -Force
           Get-ChildItem "C:/haxelib/lime/8,1,2/ndll/WinRT64"
 
+      # 4. Desactivar llamadas de escritorio Win32 en Native.hx para que compile en UWP
+      - name: Patch Native.hx for UWP
+        shell: pwsh
+        run: |
+          if (Test-Path "source/backend/Native.hx") {
+            $content = Get-Content "source/backend/Native.hx" -Raw
+            $content =$content.Replace("#if windows", "#if (windows && !winrt)")
+            Set-Content "source/backend/Native.hx" -Value $content
+          }
+
       - name: Skip SScript setup mode
         run: echo oy9:showMacroty8:loopCosti25y10:includeAllfg >> %USERPROFILE%/settings.cocoa
         shell: cmd
@@ -153,7 +163,7 @@ jobs:
       - name: Create Version Tag
         run: echo ${{github.run_id}} > VERSION
 
-      # 4. Compilar el proyecto para WinRT en 64 bits
+      # 5. Compilar el proyecto para WinRT en 64 bits
       - name: Compile
         run: haxelib run lime build winrt -64 --app-version=4.0.0-${{ github.run_id}} -D officialBuild
         shell: cmd
