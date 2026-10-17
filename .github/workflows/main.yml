@@ -1,113 +1,13 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Build
 
-# Controls when the action will run.
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
   push:
     branches: [ main, experimental ]
   pull_request:
     branches: [ main, experimental ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called build
-  buildLinux:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4.1.7
-
-      - uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
-      # Runs a set of commands using the runners shell
-      - name: Install Haxelib
-        run: |
-          sudo apt-get install libvlc-dev
-          sudo apt-get install libvlccore-dev
-          haxelib setup ~/haxelib
-          haxelib install hxcpp > /dev/null --quiet
-          chmod +x ./setup/unix.sh
-          sh ./setup/unix.sh
-      - name: Skip SScript setup mode
-        run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> ~/settings.cocoa
-      - name: Create Version Tag
-        run: echo "${{github.run_id}}" > VERSION
-      - name: Compile
-        run: haxelib run lime build Project.xml linux --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v4.3.4
-        with:
-          name: linuxBuild
-          path: 'export/release/linux/bin'
-
-  buildWindows:
-    runs-on: windows-latest
-
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4.1.7
-
-      - uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
-      # Runs a set of commands using the runners shell
-      - name: Install Haxelib
-        run: |
-          haxelib setup C:/haxelib
-          haxelib install hxcpp --quiet
-          .\"setup/windows.bat"
-        shell: cmd
-      - name: Skip SScript setup mode
-        run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> %USERPROFILE%/settings.cocoa
-        shell: cmd
-      - name: Create Version Tag
-        run: echo "${{github.run_id}}" > VERSION
-      - name: Compile
-        run: haxelib run lime build windows --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v4.3.4
-        with:
-          name: windowsBuild
-          path: export/release/windows/bin
-
-  buildMac:
-    runs-on: macos-15
-
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4.1.7
-
-      - uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
-      # Runs a set of commands using the runners shell
-      - name: Install Haxelib
-        run: |
-          haxelib setup ~/haxelib
-          haxelib install hxcpp > /dev/null --quiet
-          chmod +x ./setup/unix.sh
-          sh ./setup/unix.sh
-      - name: Skip SScript setup mode
-        run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> ~/settings.cocoa
-      - name: Create Version Tag
-        run: echo "${{github.run_id}}" > VERSION
-      - name: Compile
-        run: haxelib run lime build mac --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v4.3.4
-        with:
-          name: macBuild
-          path: export/release/macos/bin
-
   buildUWP:
     runs-on: windows-latest
 
@@ -118,13 +18,11 @@ jobs:
         with:
           haxe-version: 4.3.4
 
-      # 1. Inicializar MSVC en 64 bits
       - name: Setup MSVC Environment
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
-      # 2. Instalar librerias del proyecto
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
@@ -133,7 +31,6 @@ jobs:
           haxelib install format --always --quiet
         shell: cmd
 
-      # 3. Clonar Lime, parchar SDL y copiar lime.ndll
       - name: Clone and Rebuild Lime for WinRT64
         shell: pwsh
         run: |
@@ -146,4 +43,39 @@ jobs:
           Copy-Item -Path "C:/lime-src/ndll/WinRT64/lime.ndll" -Destination "C:/haxelib/lime/8,1,2/ndll/WinRT64/lime.ndll" -Force
           Get-ChildItem "C:/haxelib/lime/8,1,2/ndll/WinRT64"
 
-      # 4. Parchar Native.hx, Socket.cpp, entropy_poll.c, msvc-toolchain.xml y Project.xml
+      - name: Patch Files for UWP
+        shell: pwsh
+        run: |
+          Set-Content -Path "source/backend/Native.hx" -Value "package backend;`nclass Native {`npublic static function __init__():Void {}`npublic static function registerDPIAware():Void {}`npublic static function fixScaling():Void {}`n}"
+          (Get-Content "C:/haxelib/hxcpp/4,3,2/include/hxString.h").Replace("String(Platform::String ^", "explicit String(Platform::String ^") | Set-Content "C:/haxelib/hxcpp/4,3,2/include/hxString.h"
+          (Get-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Build.xml").Replace('File name="Socket.cpp" unless="winrt"', 'File name="Socket.cpp"') | Set-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Build.xml"
+          (Get-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp").Replace("!defined(HX_WINRT)", "1") | Set-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp"
+          (Get-Content "C:/haxelib/hxcpp/4,3,2/project/thirdparty/mbedtls/library/entropy_poll.c").Replace("CryptAcquireContext(", "CryptAcquireContextA(") | Set-Content "C:/haxelib/hxcpp/4,3,2/project/thirdparty/mbedtls/library/entropy_poll.c"
+          $tc = Get-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml" -Raw
+          $tc =$tc.Replace('</linker>', '<lib name="WindowsApp.lib"/><lib name="runtimeobject.lib"/><lib name="kernel32.lib"/><lib name="user32.lib"/><lib name="advapi32.lib"/><lib name="ws2_32.lib"/><lib name="ole32.lib"/><lib name="crypt32.lib"/></linker>')
+          Set-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml" -Value $tc
+          if (Test-Path "Project.xml") {
+            $proj = Get-Content "Project.xml" -Raw
+            $proj =$proj -replace '<haxelib name="hxdiscord_rpc"[^>]*>', ''
+            $proj =$proj -replace '<define name="DISCORD_ALLOWED"[^>]*/>', ''
+            $proj =$proj -replace '<haxelib name="linc_luajit"[^>]*>', ''
+            $proj =$proj -replace '<define name="LUA_ALLOWED"[^>]*/>', ''
+            Set-Content "Project.xml" -Value $proj
+          }
+
+      - name: Skip SScript setup mode
+        run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> %USERPROFILE%/settings.cocoa
+        shell: cmd
+
+      - name: Create Version Tag
+        run: echo "${{github.run_id}}" > VERSION
+
+      - name: Compile
+        run: haxelib run lime build winrt -64 --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
+        shell: cmd
+
+      - name: Publish Artifact
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: uwpBuild
+          path: export/release/winrt
