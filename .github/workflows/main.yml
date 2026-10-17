@@ -146,14 +146,14 @@ jobs:
           Copy-Item -Path "C:/lime-src/ndll/WinRT64/lime.ndll" -Destination "C:/haxelib/lime/8,1,2/ndll/WinRT64/lime.ndll" -Force
           Get-ChildItem "C:/haxelib/lime/8,1,2/ndll/WinRT64"
 
-      # 4. Desactivar llamadas de escritorio Win32 en Native.hx para que compile en UWP
+      # 4. Reemplazar Native.hx con funciones seguras para UWP (sin llamadas Win32 de escritorio)
       - name: Patch Native.hx for UWP
         shell: pwsh
         run: |
-          if (Test-Path "source/backend/Native.hx") {
-            $content = Get-Content "source/backend/Native.hx" -Raw
-            $content =$content.Replace("#if windows", "#if (windows && !winrt)")
-            Set-Content "source/backend/Native.hx" -Value $content
+          $files = Get-ChildItem -Path . -Filter "Native.hx" -Recurse
+          foreach ($f in$files) {
+            Write-Host "Parchando archivo:" $f.FullName
+            Set-Content -Path $f.FullName -Value "package backend;`nclass Native {`n`tpublic static function __init__():Void {}`n`tpublic static function registerDPIAware():Void {}`n`tpublic static function fixScaling():Void {}`n}"
           }
 
       - name: Skip SScript setup mode
