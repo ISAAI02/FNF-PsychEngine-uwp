@@ -146,12 +146,13 @@ jobs:
           Copy-Item -Path "C:/lime-src/ndll/WinRT64/lime.ndll" -Destination "C:/haxelib/lime/8,1,2/ndll/WinRT64/lime.ndll" -Force
           Get-ChildItem "C:/haxelib/lime/8,1,2/ndll/WinRT64"
 
-      # 4. Reemplazar Native.hx directamente sin usar variables ni bucles
-      - name: Patch Native.hx for UWP
+      # 4. Parchar Native.hx, hxString.h y linc_lua.cpp para compatibilidad total con WinRT
+      - name: Patch Files for UWP
         shell: pwsh
         run: |
           Set-Content -Path "source/backend/Native.hx" -Value "package backend;`nclass Native {`npublic static function __init__():Void {}`npublic static function registerDPIAware():Void {}`npublic static function fixScaling():Void {}`n}"
-          Get-Content -Path "source/backend/Native.hx"
+          (Get-Content "C:/haxelib/hxcpp/4,3,2/include/hxString.h").Replace("String(const bool &", "explicit String(const bool &").Replace("String(Platform::String ^", "explicit String(Platform::String ^") | Set-Content "C:/haxelib/hxcpp/4,3,2/include/hxString.h"
+          (Get-Content "C:/haxelib/linc_luajit/git/linc/linc_lua.cpp").Replace("::String(LUA_VERSION)", "::String((const char*)LUA_VERSION)").Replace("::String(LUAJIT_VERSION)", "::String((const char*)LUAJIT_VERSION)") | Set-Content "C:/haxelib/linc_luajit/git/linc/linc_lua.cpp"
 
       - name: Skip SScript setup mode
         run: echo oy9:showMacroty8:loopCosti25y10:includeAllfg >> %USERPROFILE%/settings.cocoa
