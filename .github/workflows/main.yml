@@ -55,17 +55,8 @@ jobs:
           (Get-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Build.xml").Replace('File name="Socket.cpp" unless="winrt"', 'File name="Socket.cpp"') | Set-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Build.xml"
           (Get-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp").Replace("!defined(HX_WINRT)", "1") | Set-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp"
           Add-Content -Path "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp" -Value "`nextern `"C`" int __stdcall CryptAcquireContextA(void*, const char*, const char*, unsigned long, unsigned long);`nextern `"C`" int CryptAcquireContext(void* a, const char* b, const char* c, unsigned long d, unsigned long e) { return CryptAcquireContextA(a, b, c, d, e); }`n"
-          $tc = Get-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml" -Raw
-          $tc =$tc.Replace('</linker>', '<lib name="WindowsApp.lib"/><lib name="runtimeobject.lib"/><lib name="kernel32.lib"/><lib name="user32.lib"/><lib name="advapi32.lib"/><lib name="ws2_32.lib"/><lib name="ole32.lib"/><lib name="crypt32.lib"/></linker>')
-          Set-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml" -Value $tc
-          if (Test-Path "Project.xml") {
-            $proj = Get-Content "Project.xml" -Raw
-            $proj =$proj -replace '<haxelib name="hxdiscord_rpc"[^>]*>', ''
-            $proj =$proj -replace '<define name="DISCORD_ALLOWED"[^>]*/>', ''
-            $proj =$proj -replace '<haxelib name="linc_luajit"[^>]*>', ''
-            $proj =$proj -replace '<define name="LUA_ALLOWED"[^>]*/>', ''
-            Set-Content "Project.xml" -Value $proj
-          }
+          (Get-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml").Replace('</linker>', '<lib name="WindowsApp.lib"/><lib name="runtimeobject.lib"/><lib name="kernel32.lib"/><lib name="user32.lib"/><lib name="advapi32.lib"/><lib name="ws2_32.lib"/><lib name="ole32.lib"/><lib name="crypt32.lib"/></linker>') | Set-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml"
+          (Get-Content "Project.xml") -replace '<haxelib name="hxdiscord_rpc"[^>]*>', '' -replace '<define name="DISCORD_ALLOWED"[^>]*/>', '' -replace '<haxelib name="linc_luajit"[^>]*>', '' -replace '<define name="LUA_ALLOWED"[^>]*/>', '' | Set-Content "Project.xml"
 
       - name: Skip SScript setup mode
         run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> %USERPROFILE%/settings.cocoa
@@ -79,59 +70,15 @@ jobs:
         run: haxelib run lime build winrt -64 --app-version="4.0.0-${{ github.run_id}}" -D officialBuild
         shell: cmd
 
-      # 6. Crear paquete .appx firmado y certificado .cer listos para Xbox Dev Mode
+      # 6. Empaquetar y firmar .appx para Xbox usando Python sin variables de PowerShell
       - name: Package and Sign APPX for Xbox
-        shell: pwsh
+        shell: cmd
         run: |
-          $binDir = "export/release/winrt/bin"
-          New-Item -ItemType Directory -Force -Path "export/xbox_ready"
-          Add-Type -AssemblyName System.Drawing
-          $bmp150 = New-Object System.Drawing.Bitmap(150, 150)
-          $bmp150.Save("$binDir/Logo.png", [System.Drawing.Imaging.ImageFormat]::Png)
-          $bmp44 = New-Object System.Drawing.Bitmap(44, 44)
-          $bmp44.Save("$binDir/SmallLogo.png", [System.Drawing.Imaging.ImageFormat]::Png)
-          $bmp50 = New-Object System.Drawing.Bitmap(50, 50)
-          $bmp50.Save("$binDir/StoreLogo.png", [System.Drawing.Imaging.ImageFormat]::Png)
-          $bmp620 = New-Object System.Drawing.Bitmap(620, 300)
-          $bmp620.Save("$binDir/SplashScreen.png", [System.Drawing.Imaging.ImageFormat]::Png)
-          $exeFile = (Get-ChildItem -Path$binDir -Filter "*.exe" | Select-Object -First 1).Name
-          $manifestXml = @"
-          <?xml version="1.0" encoding="utf-8"?>
-          <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" IgnorableNamespaces="uap">
-            <Identity Name="PsychEngineXbox" Publisher="CN=PsychEngine" Version="1.0.0.0" ProcessorArchitecture="x64" />
-            <Properties>
-              <DisplayName>FNF Psych Engine</DisplayName>
-              <PublisherDisplayName>PsychEngine</PublisherDisplayName>
-              <Logo>StoreLogo.png</Logo>
-            </Properties>
-            <Dependencies>
-              <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.10240.0" MaxVersionTested="10.0.22621.0" />
-              <TargetDeviceFamily Name="Windows.Xbox" MinVersion="10.0.10240.0" MaxVersionTested="10.0.22621.0" />
-              <PackageDependency Name="Microsoft.VCLibs.140.00" MinVersion="14.0.0.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
-            </Dependencies>
-            <Resources>
-              <Resource Language="en-us" />
-            </Resources>
-            <Applications>
-              <Application Id="App" Executable="$exeFile" EntryPoint="PsychEngineXbox.App">
-                <uap:VisualElements DisplayName="FNF Psych Engine" Square150x150Logo="Logo.png" Square44x44Logo="SmallLogo.png" Description="Psych Engine UWP" BackgroundColor="transparent">
-                  <uap:SplashScreen Image="SplashScreen.png" />
-                </uap:VisualElements>
-              </Application>
-            </Applications>
-            <Capabilities>
-              <Capability Name="internetClient" />
-            </Capabilities>
-          </Package>
-          "@
-          Set-Content -Path "$binDir/AppxManifest.xml" -Value $manifestXml -Encoding UTF8$cert = New-SelfSignedCertificate -Type Custom -Subject "CN=PsychEngine" -KeyUsage DigitalSignature -FriendlyName "PsychEngineCert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
-          $pwd = ConvertTo-SecureString -String "1234" -Force -AsPlainText
-          Export-PfxCertificate -Cert $cert -FilePath "export/xbox_ready/PsychEngine.pfx" -Password $pwd
-          Export-Certificate -Cert $cert -FilePath "export/xbox_ready/PsychEngine.cer"
-          makeappx pack /d "$binDir" /p "export/xbox_ready/PsychEngine.appx" /o
-          signtool sign /fd SHA256 /a /f "export/xbox_ready/PsychEngine.pfx" /p "1234" "export/xbox_ready/PsychEngine.appx"
-          $vclibs = Get-ChildItem -Path "C:\Program Files (x86)\Microsoft SDKs\Windows Kits\10\ExtensionSDKs\Microsoft.VCLibs" -Filter "*x64*.appx" -Recurse | Select-Object -First 1
-          if ($vclibs) { Copy-Item$vclibs.FullName -Destination "export/xbox_ready/" }
+          mkdir export\xbox_ready
+          python -c "import os, glob, shutil; b='export/release/winrt/bin'; exe=os.path.basename(glob.glob(b+'/*.exe')[0]); png=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'; [open(b+'/'+f,'wb').write(png) for f in ['Logo.png','SmallLogo.png','StoreLogo.png','SplashScreen.png'] if not os.path.exists(b+'/'+f)]; xml='<?xml version=\"1.0\" encoding=\"utf-8\"?><Package xmlns=\"http://schemas.microsoft.com/appx/manifest/foundation/windows10\" xmlns:uap=\"http://schemas.microsoft.com/appx/manifest/uap/windows10\" IgnorableNamespaces=\"uap\"><Identity Name=\"PsychEngineXbox\" Publisher=\"CN=PsychEngine\" Version=\"1.0.0.0\" ProcessorArchitecture=\"x64\"/><Properties><DisplayName>FNF Psych Engine</DisplayName><PublisherDisplayName>PsychEngine</PublisherDisplayName><Logo>StoreLogo.png</Logo></Properties><Dependencies><TargetDeviceFamily Name=\"Windows.Universal\" MinVersion=\"10.0.10240.0\" MaxVersionTested=\"10.0.22621.0\"/><TargetDeviceFamily Name=\"Windows.Xbox\" MinVersion=\"10.0.10240.0\" MaxVersionTested=\"10.0.22621.0\"/><PackageDependency Name=\"Microsoft.VCLibs.140.00\" MinVersion=\"14.0.0.0\" Publisher=\"CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US\"/></Dependencies><Resources><Resource Language=\"en-us\"/></Resources><Applications><Application Id=\"App\" Executable=\"'+exe+'\" EntryPoint=\"PsychEngineXbox.App\"><uap:VisualElements DisplayName=\"FNF Psych Engine\" Square150x150Logo=\"Logo.png\" Square44x44Logo=\"SmallLogo.png\" Description=\"Psych Engine UWP\" BackgroundColor=\"transparent\"><uap:SplashScreen Image=\"SplashScreen.png\"/></uap:VisualElements></Application></Applications><Capabilities><Capability Name=\"internetClient\"/></Capabilities></Package>'; open(b+'/AppxManifest.xml','w',encoding='utf-8').write(xml); vc=glob.glob('C:/Program Files (x86)/Microsoft SDKs/Windows Kits/10/ExtensionSDKs/Microsoft.VCLibs/**/x64/*VCLibs*.appx',recursive=True); [shutil.copy2(vc[0],'export/xbox_ready/') for _ in vc[:1]]"
+          pwsh -Command "$c = New-SelfSignedCertificate -Type Custom -Subject 'CN=PsychEngine' -KeyUsage DigitalSignature -FriendlyName 'XboxCert' -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3','2.5.29.19={text}'); $p = ConvertTo-SecureString -String '1234' -Force -AsPlainText; Export-PfxCertificate -Cert$c -FilePath 'export/xbox_ready/PsychEngine.pfx' -Password $p; Export-Certificate -Cert$c -FilePath 'export/xbox_ready/PsychEngine.cer'"
+          makeappx pack /d "export\release\winrt\bin" /p "export\xbox_ready\PsychEngine.appx" /o /nv
+          signtool sign /fd SHA256 /a /f "export\xbox_ready\PsychEngine.pfx" /p "1234" "export\xbox_ready\PsychEngine.appx"
 
       # 7. Subir solo los archivos listos para instalar en la Xbox
       - name: Publish Artifact
