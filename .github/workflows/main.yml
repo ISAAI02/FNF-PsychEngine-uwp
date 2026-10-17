@@ -118,30 +118,38 @@ jobs:
         with:
           haxe-version: 4.3.4
 
-      # 1. Inicializar las herramientas de C++ de Visual Studio en 64 bits
-      - name: Setup MSVC Environment
+      # 1. Asegurar que Visual Studio tenga las librerias C++ de UWP instaladas
+      - name: Install Visual Studio UWP C++ Tools
+        run: |
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $vsPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          Start-Process -FilePath $installer -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.ComponentGroup.UWP.VC --add Microsoft.VisualStudio.Component.UWP.Support --quiet --norestart" -Wait
+        shell: pwsh
+
+      # 2. Inicializar las herramientas de C++ en modo UWP de 64 bits
+      - name: Setup MSVC Environment for UWP
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+          app_platform: UWP
 
-      # 2. Instalar librerias del proyecto
+      # 3. Instalar librerias del proyecto usando call para no cortar el script
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
           haxelib install hxcpp > /dev/null --quiet
-          .\"setup/windows.bat"
+          haxelib install format > /dev/null --quiet
+          call .\setup\windows.bat
         shell: cmd
 
-      # 3. Clonar el codigo fuente completo de Lime y compilar WinRT64
+      # 4. Clonar Lime y compilar lime.ndll verificando que no falle en silencio
       - name: Clone and Rebuild Lime for WinRT64
         run: |
-          haxelib install format > /dev/null --quiet
-          git clone --recursive --depth 1 --branch 8.1.2 https://github.com/openfl/lime.git C:/lime-src
+          git clone --recursive --depth 1 --branch 8.1.2 https://github.com/openfl/lime.git C:\lime-src
           cd /d C:\lime-src\project
-          haxelib run hxcpp Build.xml -Dwinrt -DHXCPP_M64
-          mkdir C:\haxelib\lime\8,1,2\ndll\WinRT64
-          copy /Y C:\lime-src\ndll\WinRT64\lime.ndll C:\haxelib\lime\8,1,2\ndll\WinRT64\lime.ndll
-          dir C:\haxelib\lime\8,1,2\ndll\WinRT64
+          haxelib run hxcpp Build.xml -Dwinrt -DHXCPP_M64 || exit /b 1
+          if not exist "C:\haxelib\lime\8,1,2\ndll\WinRT64" mkdir "C:\haxelib\lime\8,1,2\ndll\WinRT64"
+          copy /Y "C:\lime-src\ndll\WinRT64\lime.ndll" "C:\haxelib\lime\8,1,2\ndll\WinRT64\lime.ndll" || exit /b 1
         shell: cmd
 
       - name: Skip SScript setup mode
@@ -151,7 +159,7 @@ jobs:
       - name: Create Version Tag
         run: echo ${{github.run_id}} > VERSION
 
-      # 4. Compilar el proyecto para WinRT en 64 bits
+      # 5. Compilar el proyecto para WinRT en 64 bits
       - name: Compile
         run: haxelib run lime build winrt -64 --app-version=4.0.0-${{ github.run_id}} -D officialBuild
         shell: cmd
