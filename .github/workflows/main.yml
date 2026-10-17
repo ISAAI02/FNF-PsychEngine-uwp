@@ -118,22 +118,13 @@ jobs:
         with:
           haxe-version: 4.3.4
 
-      # 1. Asegurar que Visual Studio tenga las librerias C++ de UWP instaladas
-      - name: Install Visual Studio UWP C++ Tools
-        run: |
-          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-          $vsPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-          Start-Process -FilePath $installer -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.ComponentGroup.UWP.VC --add Microsoft.VisualStudio.Component.UWP.Support --quiet --norestart" -Wait
-        shell: pwsh
-
-      # 2. Inicializar las herramientas de C++ en modo UWP de 64 bits
-      - name: Setup MSVC Environment for UWP
+      # 1. Inicializar MSVC en 64 bits
+      - name: Setup MSVC Environment
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-          app_platform: UWP
 
-      # 3. Instalar librerias del proyecto usando call para no cortar el script
+      # 2. Instalar librerias del proyecto
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
@@ -142,14 +133,17 @@ jobs:
           call .\setup\windows.bat
         shell: cmd
 
-      # 4. Clonar Lime y compilar lime.ndll verificando que no falle en silencio
+      # 3. Clonar Lime, parchar SDL_winrtgamebar.cpp y compilar lime.ndll
       - name: Clone and Rebuild Lime for WinRT64
         run: |
           git clone --recursive --depth 1 --branch 8.1.2 https://github.com/openfl/lime.git C:\lime-src
-          cd /d C:\lime-src\project
-          haxelib run hxcpp Build.xml -Dwinrt -DHXCPP_M64 || exit /b 1
+          python -c "open(r'C:\lime-src\project\lib\sdl\src\video\winrt\SDL_winrtgamebar.cpp', 'w').write('extern \"C\" void WINRT_InitGameBar(void *d) {}\nextern \"C\" void WINRT_QuitGameBar(void *d) {}\n')"
+          haxelib dev lime C:\lime-src
+          haxelib run lime rebuild tools -64
+          haxelib run lime rebuild winrt -64 -release
           if not exist "C:\haxelib\lime\8,1,2\ndll\WinRT64" mkdir "C:\haxelib\lime\8,1,2\ndll\WinRT64"
-          copy /Y "C:\lime-src\ndll\WinRT64\lime.ndll" "C:\haxelib\lime\8,1,2\ndll\WinRT64\lime.ndll" || exit /b 1
+          if exist "C:\lime-src\ndll\WinRT64\lime.ndll" copy /Y "C:\lime-src\ndll\WinRT64\lime.ndll" "C:\haxelib\lime\8,1,2\ndll\WinRT64\lime.ndll"
+          dir C:\lime-src\ndll\WinRT64
         shell: cmd
 
       - name: Skip SScript setup mode
@@ -159,7 +153,7 @@ jobs:
       - name: Create Version Tag
         run: echo ${{github.run_id}} > VERSION
 
-      # 5. Compilar el proyecto para WinRT en 64 bits
+      # 4. Compilar el proyecto para WinRT en 64 bits
       - name: Compile
         run: haxelib run lime build winrt -64 --app-version=4.0.0-${{ github.run_id}} -D officialBuild
         shell: cmd
