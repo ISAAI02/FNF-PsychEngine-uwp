@@ -135,12 +135,13 @@ jobs:
       # 3. Clonar el codigo fuente completo de Lime y compilar WinRT64
       - name: Clone and Rebuild Lime for WinRT64
         run: |
+          haxelib install format > /dev/null --quiet
           git clone --recursive --depth 1 --branch 8.1.2 https://github.com/openfl/lime.git C:/lime-src
-          haxelib dev lime C:/lime-src
-          haxelib run lime rebuild tools
-          cd C:/lime-src/project
+          cd /d C:\lime-src\project
           haxelib run hxcpp Build.xml -Dwinrt -DHXCPP_M64
-          dir C:\lime-src\ndll\WinRT64
+          mkdir C:\haxelib\lime\8,1,2\ndll\WinRT64
+          copy /Y C:\lime-src\ndll\WinRT64\lime.ndll C:\haxelib\lime\8,1,2\ndll\WinRT64\lime.ndll
+          dir C:\haxelib\lime\8,1,2\ndll\WinRT64
         shell: cmd
 
       - name: Skip SScript setup mode
