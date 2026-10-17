@@ -133,33 +133,8 @@ jobs:
           haxelib install format --always --quiet
         shell: cmd
 
-      # 3. Clonar Lime, parchar SDL_winrtgamebar.cpp sin includes y compilar lime.ndll
+      # 3. Clonar Lime, compilar lime.ndll y copiarlo con Python de forma segura
       - name: Clone and Rebuild Lime for WinRT64
         run: |
           git clone --recursive --depth 1 --branch 8.1.2 https://github.com/openfl/lime.git C:\lime-src
-          python -c "open(r'C:\lime-src\project\lib\sdl\src\video\winrt\SDL_winrtgamebar.cpp', 'w').write('struct SDL_VideoDevice;\nvoid WINRT_InitGameBar(SDL_VideoDevice *_this) {}\nvoid WINRT_QuitGameBar(SDL_VideoDevice *_this) {}\n')"
-          pushd C:\lime-src\project
-          haxelib run hxcpp Build.xml -Dwinrt -DHXCPP_M64 || exit /b 1
-          popd
-          if not exist "C:\haxelib\lime\8,1,2\ndll\WinRT64" mkdir "C:\haxelib\lime\8,1,2\ndll\WinRT64"
-          copy /Y "C:\lime-src\ndll\WinRT64\lime.ndll" "C:\haxelib\lime\8,1,2\ndll\WinRT64\lime.ndll" || exit /b 1
-          dir C:\haxelib\lime\8,1,2\ndll\WinRT64
-        shell: cmd
-
-      - name: Skip SScript setup mode
-        run: echo oy9:showMacroty8:loopCosti25y10:includeAllfg >> %USERPROFILE%/settings.cocoa
-        shell: cmd
-
-      - name: Create Version Tag
-        run: echo ${{github.run_id}} > VERSION
-
-      # 4. Compilar el proyecto para WinRT en 64 bits
-      - name: Compile
-        run: haxelib run lime build winrt -64 --app-version=4.0.0-${{ github.run_id}} -D officialBuild
-        shell: cmd
-
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v4.3.4
-        with:
-          name: uwpBuild
-          path: export/release/winrt
+          python -c "open(r'C
