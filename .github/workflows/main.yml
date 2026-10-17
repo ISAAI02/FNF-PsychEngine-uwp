@@ -50,7 +50,7 @@ jobs:
           (Get-Content "C:/haxelib/hxcpp/4,3,2/include/hxString.h").Replace("String(Platform::String ^", "explicit String(Platform::String ^") | Set-Content "C:/haxelib/hxcpp/4,3,2/include/hxString.h"
           (Get-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Build.xml").Replace('File name="Socket.cpp" unless="winrt"', 'File name="Socket.cpp"') | Set-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Build.xml"
           (Get-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp").Replace("!defined(HX_WINRT)", "1") | Set-Content "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp"
-          (Get-Content "C:/haxelib/hxcpp/4,3,2/project/thirdparty/mbedtls/library/entropy_poll.c").Replace("CryptAcquireContext(", "CryptAcquireContextA(") | Set-Content "C:/haxelib/hxcpp/4,3,2/project/thirdparty/mbedtls/library/entropy_poll.c"
+          Add-Content -Path "C:/haxelib/hxcpp/4,3,2/src/hx/libs/std/Socket.cpp" -Value "`nextern `"C`" int __stdcall CryptAcquireContextA(void*, const char*, const char*, unsigned long, unsigned long);`nextern `"C`" int CryptAcquireContext(void* a, const char* b, const char* c, unsigned long d, unsigned long e) { return CryptAcquireContextA(a, b, c, d, e); }`n"
           $tc = Get-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml" -Raw
           $tc =$tc.Replace('</linker>', '<lib name="WindowsApp.lib"/><lib name="runtimeobject.lib"/><lib name="kernel32.lib"/><lib name="user32.lib"/><lib name="advapi32.lib"/><lib name="ws2_32.lib"/><lib name="ole32.lib"/><lib name="crypt32.lib"/></linker>')
           Set-Content "C:/haxelib/hxcpp/4,3,2/toolchain/msvc-toolchain.xml" -Value $tc
